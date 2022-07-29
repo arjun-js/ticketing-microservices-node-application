@@ -1,4 +1,6 @@
 import mongoose from 'mongoose';
+import { transform } from 'typescript';
+import { Password } from '../services/password';
 
 
 //interface to know what is required to create user
@@ -28,8 +30,28 @@ const userSchema = new mongoose.Schema({
 
     password: {
         type: String,
-        required: true
+        required: true 
     }
+}, {
+    toJSON: {
+        transform(doc, ret){
+            ret.id = ret._id;
+            delete ret._id;
+            delete ret.password;
+            delete ret.__v;
+        }
+    }
+});
+
+userSchema.pre('save', async function(done){
+    //this will be user document here.
+
+    if(this.isModified('password')){
+        const hashed = await Password.toHash(this.get('password'));
+        this.set('password', hashed);
+    }
+    done();
+
 });
 
 userSchema.statics.build = (attrs: UserAttrs)=>{
